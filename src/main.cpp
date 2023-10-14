@@ -3,6 +3,7 @@
 #include "YOLO_v8ObjDetection.h"
 #include "YOLO_v8Pose.h"
 #include "YOLO_v5ObjDetection.h"
+#include "DetectedFeature.h"
 
 
 int main() {
@@ -14,7 +15,12 @@ int main() {
    cv::Mat inputImg = cv::imread( "../images/f16_2.png" );
    cv::Mat outputImg = cv::Mat();
 
-   yolo->getFeatureLocationsInImage( inputImg, outputImg );
+   auto detections= yolo->getFeatureLocationsInImage( inputImg, outputImg );
+
+   for( const auto& detection : detections ) {
+      std::cout << detection << "\n";
+   }
+
 
    cv::imshow( "Input:", inputImg );
    cv::waitKey( 0 );
