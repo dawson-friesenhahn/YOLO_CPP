@@ -10,6 +10,7 @@
 class YOLO_Abstract {
 public:
    //Use a YOLO Model to make inferences on an image. Returns a vector of pairs, where each pair is {feature index, feature location (OpenCV screen space)}
+   //Optionally, pass in a cv::Mat to use as a labeled output image and a vector of class names to use as labels
    virtual std::vector<DetectedFeature> getFeatureLocationsInImage(  const cv::Mat& inputImage, 
                                                                      std::optional<std::reference_wrapper<cv::Mat>> outputImage= std::nullopt, 
                                                                      std::optional<std::vector<std::string>> classNames= std::nullopt ) = 0;

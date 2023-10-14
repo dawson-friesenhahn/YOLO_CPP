@@ -7,10 +7,20 @@
 
 
 int main() {
+   
+   
+   //Uncomment for v8ObjDetection
    //std::unique_ptr<YOLO_Abstract> yolo = std::make_unique<YOLO_v8ObjDetection>(); //goal is to be able to easily sub in a new model architecture here
    //yolo->loadModel( "../models/v8_objDetection.onnx" );
-   std::unique_ptr<YOLO_Abstract> yolo = std::make_unique<YOLO_v5ObjDetection>();
-   yolo->loadModel( "../models/v5_objDetection.onnx" );
+  
+   //Uncomment for v5ObjDetection
+   //std::unique_ptr<YOLO_Abstract> yolo = std::make_unique<YOLO_v5ObjDetection>();
+   //yolo->loadModel( "../models/v5_objDetection.onnx" );
+
+   //Uncomment for v8Pose
+   std::unique_ptr<YOLO_Abstract> yolo = std::make_unique<YOLO_v8Pose>();
+   yolo->loadModel( "../models/v8_Pose.onnx" );
+
    
    cv::Mat inputImg = cv::imread( "../images/f16_2.png" );
    cv::Mat outputImg = cv::Mat();
