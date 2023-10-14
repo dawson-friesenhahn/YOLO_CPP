@@ -57,7 +57,7 @@ std::vector<DetectedFeature> YOLO_v8ObjDetection::post_process( std::vector<cv::
       auto scores = row + 4;
       float max_score = *(scores);
       int max_score_idx = 0;
-      for( int class_score_idx = 1; class_score_idx < channels - 4; class_score_idx++ ) {
+      for( int class_score_idx = 1; class_score_idx < channels - 4; class_score_idx++ ) { //TODO change to minMaxLoc
          float score = *(scores + class_score_idx);
          if( score > max_score ) {
             max_score = score;
