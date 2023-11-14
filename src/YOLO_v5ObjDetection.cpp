@@ -1,21 +1,6 @@
 #include "YOLO_v5ObjDetection.h"
 #include "OpenCVHelperFunctions.h"
 
-std::vector<DetectedFeature>  YOLO_v5ObjDetection::getFeatureLocationsInImage( const cv::Mat& inputImage, std::optional<std::reference_wrapper<cv::Mat>> outputImage, std::optional<std::vector<std::string>> classNames ) {
-   auto forwardPassResults = this->pre_process( inputImage );
-
-
-   float x_scaling_factor = static_cast<float>(inputImage.cols) / INPUT_WIDTH;
-   float y_scaling_factor = static_cast<float>(inputImage.rows) / INPUT_HEIGHT;
-
-   auto results = post_process( forwardPassResults, x_scaling_factor, y_scaling_factor );
-
-   if( outputImage ) {
-      this->drawLabeledImage( inputImage, outputImage.value(), results, classNames );
-   }
-   return results;
-}
-
 std::vector<cv::Mat> YOLO_v5ObjDetection::pre_process( const cv::Mat& inputImage )
 {
    cv::Mat blob;

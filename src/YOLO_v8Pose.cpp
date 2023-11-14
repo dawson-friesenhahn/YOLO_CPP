@@ -1,21 +1,6 @@
 #include "YOLO_v8Pose.h"
 #include "OpenCVHelperFunctions.h"
 
-std::vector<DetectedFeature>  YOLO_v8Pose::getFeatureLocationsInImage( const cv::Mat& inputImage, std::optional<std::reference_wrapper<cv::Mat>> outputImage, std::optional<std::vector<std::string>> classNames ) {
-   auto forwardPassResults = this->pre_process( inputImage );
-
-
-   float x_scaling_factor = static_cast<float>(inputImage.cols) / INPUT_WIDTH;
-   float y_scaling_factor = static_cast<float>(inputImage.rows) / INPUT_HEIGHT;
-
-   auto results = post_process( forwardPassResults, x_scaling_factor, y_scaling_factor );
-
-   if( outputImage ) {
-      this->drawLabeledImage( inputImage, outputImage.value(), results, classNames );
-   }
-   return results;
-}
-
 std::vector<cv::Mat> YOLO_v8Pose::pre_process( const cv::Mat& inputImage )
 {
    cv::Mat blob;
@@ -43,7 +28,7 @@ std::vector<cv::Mat> YOLO_v8Pose::pre_process( const cv::Mat& inputImage )
 std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor )
 {
    const int anchors = netOutputs[0].size[2];//8400 for obj detection
-   const int channels = netOutputs[0].size[1];
+   const int channels = netOutputs[0].size[1]; //bbox cx, cy, w, h, score, then kp x,y, score. This number should be 5 + num_keypoints * 3. If not, maybe you forgot to train with keypoint visibility in your labels so you don't have keypoint confidence in the output.
    if( numKeypoints != (channels - 4) / 3 ) {
       if( numKeypoints != -1 ) {
          std::cout << "Hey, the number of keypoints changed. That's weird.\n";
@@ -102,11 +87,17 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
    cv::dnn::NMSBoxes( bboxList, scoreList, SCORE_THRESHOLD, NMS_THRESHOLD, indices );
 
    std::vector<DetectedFeature> detections;
-   this->boundingBoxes.clear(); 
+   this->boundingBoxes.clear();
+   allKeypoints.clear();
    for( const auto& index : indices ) {
       boundingBoxes.push_back( bboxList.at( index ) );
       auto keypoints = listOfListOfKeypoints.at( index );
-      detections.insert( detections.end(), keypoints.begin(), keypoints.end() );
+      allKeypoints.insert( allKeypoints.end(), keypoints.begin(), keypoints.end() ); //keep all the keypoints in this vector, for drawing the labels
+      for( auto& keypoint : keypoints ) {
+         if( keypoint.confidence > this->SCORE_THRESHOLD ) {
+            detections.push_back( keypoint ); //only the good keypoints get returned.
+         }
+      }
    }
 
    return detections;
@@ -115,28 +106,38 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
 
 void YOLO_v8Pose::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputImage, std::vector<DetectedFeature> detections, std::optional<std::vector<std::string>> classNames )
 {
+   static const cv::Scalar red( { 0, 0, 255 } );
+   static const cv::Scalar green( { 0, 255, 0 } );
+
    outputImage = inputImage.clone();
    
-   assert( boundingBoxes.size() == detections.size() / numKeypoints );
+   assert( boundingBoxes.size() == allKeypoints.size() / numKeypoints );
 
    for( int i = 0; i < boundingBoxes.size(); i++ ) {
       cv::rectangle( outputImage, boundingBoxes.at( i ), { 255,0,0 } ); //TODO maybe make this so that different instances get different colors
+   }
 
-      for( int kpt_index = 0; kpt_index < numKeypoints; kpt_index++ ) {
-         std::string label;
-         if( classNames ) {
-            label = classNames->at( detections.at( i*numKeypoints + kpt_index ).classIndex );
-         }
-         else {
-            label = std::to_string( detections.at( i*numKeypoints + kpt_index ).classIndex );
-         }
-         cv::drawMarker( outputImage, detections.at( i * numKeypoints + kpt_index ).location, { 255,0,0 }, cv::MARKER_CROSS, 5 );
-
-
-
-         label += ": " + std::to_string( detections.at( i * numKeypoints + kpt_index ).confidence );
-         cv::putText( outputImage, label, detections.at( i * numKeypoints + kpt_index ).location, cv::FONT_HERSHEY_SIMPLEX, 0.25, { 255,0,0 } );
+   for( const auto& keypt: allKeypoints) {
+      std::string label;
+      if( classNames ) {
+         label = classNames->at( keypt.classIndex );
+      }
+      else {
+         label = std::to_string( keypt.classIndex );
       }
 
+      cv::Scalar color;
+      if( keypt.confidence > this->SCORE_THRESHOLD ) {
+         color = green;
+      }
+      else {
+         color = red;
+      }
+
+      cv::drawMarker( outputImage, keypt.location, color, cv::MARKER_CROSS, 5 );
+      label += ": " + std::to_string( keypt.confidence );
+      cv::putText( outputImage, label, keypt.location, cv::FONT_HERSHEY_SIMPLEX, 0.25, color );
    }
+
+   
 }
