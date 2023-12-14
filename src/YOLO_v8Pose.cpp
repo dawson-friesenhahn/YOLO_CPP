@@ -1,6 +1,11 @@
 #include "YOLO_v8Pose.h"
 #include "OpenCVHelperFunctions.h"
 
+void YOLO_v8Pose::setNumClasses( int numClasses )
+{
+   this->numClasses = numClasses;
+}
+
 std::vector<cv::Mat> YOLO_v8Pose::pre_process( const cv::Mat& inputImage )
 {
    cv::Mat blob;
@@ -28,12 +33,12 @@ std::vector<cv::Mat> YOLO_v8Pose::pre_process( const cv::Mat& inputImage )
 std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor )
 {
    const int anchors = netOutputs[0].size[2];//8400 for obj detection
-   const int channels = netOutputs[0].size[1]; //bbox cx, cy, w, h, score, then kp x,y, score. This number should be 5 + num_keypoints * 3. If not, maybe you forgot to train with keypoint visibility in your labels so you don't have keypoint confidence in the output.
-   if( numKeypoints != (channels - 4) / 3 ) {
+   const int channels = netOutputs[0].size[1]; //bbox cx, cy, w, h, class0Score, class1Score, ... classNScore, then kp x,y, score. This number should be 4+ num_classes + num_keypoints * 3. If not, maybe you forgot to train with keypoint visibility in your labels so you don't have keypoint confidence in the output.
+   if( numKeypoints != (channels - 4- this->numClasses) / 3 ) {
       if( numKeypoints != -1 ) {
          std::cout << "Hey, the number of keypoints changed. That's weird.\n";
       }
-      numKeypoints = (channels - 4) / 3;
+      numKeypoints = (channels - 4- this->numClasses) / 3;
    }
 
 
@@ -49,20 +54,49 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
 
    for( int i = 0; i < anchors; i++ ) {
       auto row = output.row( i ).ptr<float>(); 
-      auto score = row + 4;
-      auto kp_ptr = row + 5;
+      auto classScore_ptr = row + 4;
+      auto kp_ptr = row + 4 + this->numClasses;
+      
+      int bestClassIdx = 0;
+      float bestClassScore = *classScore_ptr;
+
+      for( int j = 1; j < this->numClasses; j++ ) {
+         if( *(classScore_ptr + j) > bestClassScore ) {
+            bestClassIdx = j;
+            bestClassScore = *(classScore_ptr + j);
+         }
+      }
+
+
+      
+
+      if (1){ //DEBUG
+         for( int blah = 0; blah < channels; blah++ ) {
+            auto x = *(row + blah);
+            int y = 2;
+         }
+      }
+
      
 
-      if( *score > SCORE_THRESHOLD ) { //this is the overall class score
+      if( bestClassScore > SCORE_THRESHOLD ) { //this is the overall class score
          //std::cout << "hey, good detection? " << std::endl;
+         if( 1 ) { //DEBUG
+            std::cout << " -------------------\n";
+            for( int blah = 0; blah < channels; blah++ ) {
+               auto x = *(row + blah);
+               std::cout << blah << ": " << x << "\n";
+            }
+         }
+
          float center_x = *row * x_scale_factor;
          float center_y = *(row + 1) * y_scale_factor;
          float width = *(row + 2) * x_scale_factor;
          float height = *(row + 3) * y_scale_factor;
 
          bboxList.push_back( OpenCVHelperFunctions::makeRectFromCXCYWidthHeight( center_x, center_y, width, height ) );
-         scoreList.push_back( *score );
-         classList.push_back( 0 ); //TODO where is the class index actually scored?
+         scoreList.push_back( bestClassScore );
+         classList.push_back( bestClassIdx ); 
 
 
          std::vector<DetectedFeature> kps;
@@ -74,7 +108,7 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
 
             feat.location = { kps_x, kps_y };
             feat.confidence = kps_s;
-            feat.classIndex = k; //just assumes that keypoints are in the same order always
+            feat.classIndex = k; //just assumes that keypoints are in the same order always. Need to fix this to account for multiple objects with the same number of keypoints
             kps.push_back( feat );
          }
          listOfListOfKeypoints.push_back( kps );
