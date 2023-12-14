@@ -19,14 +19,18 @@ int main() {
 
    //Uncomment for v8Pose
    std::unique_ptr<YOLO_Abstract> yolo = std::make_unique<YOLO_v8Pose>();
-   yolo->loadModel( "../models/v8_pose_multiClass.onnx" );
-   dynamic_cast<YOLO_v8Pose*>(yolo.get())->setNumClasses( 3 );
-
-   //yolo->loadModel( "../models/v8_Pose.onnx" );
-
+   yolo->loadModel( "../models/v8_Pose.onnx" );
    
-   cv::Mat inputImg = cv::imread( "../images/capture0.jpeg" );
-   //cv::Mat inputImg = cv::imread( "../images/f16_1.png" );
+   
+   cv::Mat inputImg = cv::imread( "../images/f16_1.png" );
+
+
+   //Uncomment for v8Pose (multi-model). Same class is being used (YOLOv_v8Pose), but I left these 3 lines here to show how I used it.
+   //std::unique_ptr<YOLO_Abstract> yolo = std::make_unique<YOLO_v8Pose>();
+   //yolo->loadModel( "../models/v8_pose_multiClass.onnx" );
+   //dynamic_cast<YOLO_v8Pose*>(yolo.get())->setNumClasses( 3 ); //I don't like this line, but I couldn't think of a concise way to determine the number of classes just by parsing the onnx file. I'm sure with some thought, we could figure it out.
+   //cv::Mat inputImg = cv::imread( "../images/capture0.jpeg" );
+   
    cv::Mat outputImg = cv::Mat();
 
    auto detections= yolo->getFeatureLocationsInImage( inputImg, outputImg );

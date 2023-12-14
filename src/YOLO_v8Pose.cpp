@@ -66,28 +66,11 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
             bestClassScore = *(classScore_ptr + j);
          }
       }
-
-
-      
-
-      if (1){ //DEBUG
-         for( int blah = 0; blah < channels; blah++ ) {
-            auto x = *(row + blah);
-            int y = 2;
-         }
-      }
-
      
 
       if( bestClassScore > SCORE_THRESHOLD ) { //this is the overall class score
          //std::cout << "hey, good detection? " << std::endl;
-         if( 1 ) { //DEBUG
-            std::cout << " -------------------\n";
-            for( int blah = 0; blah < channels; blah++ ) {
-               auto x = *(row + blah);
-               std::cout << blah << ": " << x << "\n";
-            }
-         }
+         
 
          float center_x = *row * x_scale_factor;
          float center_y = *(row + 1) * y_scale_factor;
@@ -108,7 +91,7 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
 
             feat.location = { kps_x, kps_y };
             feat.confidence = kps_s;
-            feat.classIndex = k; //just assumes that keypoints are in the same order always. Need to fix this to account for multiple objects with the same number of keypoints
+            feat.classIndex = (numKeypoints * bestClassIdx) + k; //this attempts to make a classIndex here match what an identical feature would produce in a v5ObjectDetection
             kps.push_back( feat );
          }
          listOfListOfKeypoints.push_back( kps );
