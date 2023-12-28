@@ -25,7 +25,7 @@ std::vector<DetectedFeature> YOLO_Abstract::getFeatureLocationsInImage( const cv
    return results;
 }
 
-void YOLO_Abstract::loadModel( std::filesystem::path pathToModel )
+void YOLO_Abstract::loadModel( std::filesystem::path pathToModel, bool useCUDABackend )
 {
    try {
       this->net = std::make_unique<cv::dnn::Net>( cv::dnn::readNetFromONNX( pathToModel.string() ) );
@@ -34,6 +34,12 @@ void YOLO_Abstract::loadModel( std::filesystem::path pathToModel )
       std::cout << e.what();
       std::abort();
    }
-   this->net->setPreferableBackend( cv::dnn::DNN_BACKEND_CUDA ); //these should make things faster, but for some reason v8 obj Detection doesn't work with CUDA? v5 and v8 Pose seem to be working fine. 
-   this->net->setPreferableTarget( cv::dnn::DNN_TARGET_CUDA );
+   if( useCUDABackend ) {
+      this->net->setPreferableBackend( cv::dnn::DNN_BACKEND_CUDA ); //these should make things faster, but for some reason v8 obj Detection doesn't work with CUDA? v5 and v8 Pose seem to be working fine. 
+      this->net->setPreferableTarget( cv::dnn::DNN_TARGET_CUDA );
+   }
+   else {
+      this->net->setPreferableBackend( cv::dnn::DNN_BACKEND_OPENCV );
+      this->net->setPreferableTarget( cv::dnn::DNN_TARGET_CPU );
+   }
 }

@@ -15,7 +15,7 @@ public:
    virtual std::vector<DetectedFeature> getFeatureLocationsInImage(  const cv::Mat& inputImage, 
                                                                      std::optional<std::reference_wrapper<cv::Mat>> outputImage= std::nullopt, 
                                                                      std::optional<std::vector<std::string>> classNames= std::nullopt );
-   virtual void loadModel( std::filesystem::path pathToModel );
+   virtual void loadModel( std::filesystem::path pathToModel, bool useCUDABackend= true );
    float SCORE_THRESHOLD = 0.5;
    float NMS_THRESHOLD = 0.5;
 
