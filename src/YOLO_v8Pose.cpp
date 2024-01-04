@@ -30,7 +30,7 @@ std::vector<cv::Mat> YOLO_v8Pose::pre_process( const cv::Mat& inputImage )
    return outputs;
 }
 
-std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor )
+std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor, std::optional<std::pair<int, int>> tb_lr_borders_forSquare )
 {
    const int anchors = netOutputs[0].size[2];//8400 for obj detection
    const int channels = netOutputs[0].size[1]; //bbox cx, cy, w, h, class0Score, class1Score, ... classNScore, then kp x,y, score. This number should be 4+ num_classes + num_keypoints * 3. If not, maybe you forgot to train with keypoint visibility in your labels so you don't have keypoint confidence in the output.
@@ -77,6 +77,12 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
          float width = *(row + 2) * x_scale_factor;
          float height = *(row + 3) * y_scale_factor;
 
+         if( tb_lr_borders_forSquare ) {
+            center_y = center_y - tb_lr_borders_forSquare.value().first;
+            center_x = center_x - tb_lr_borders_forSquare.value().second;
+         }
+
+
          bboxList.push_back( OpenCVHelperFunctions::makeRectFromCXCYWidthHeight( center_x, center_y, width, height ) );
          scoreList.push_back( bestClassScore );
          classList.push_back( bestClassIdx ); 
@@ -88,6 +94,11 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
             float kps_x = (*(kp_ptr + 3 * k)) * x_scale_factor;
             float kps_y = (*(kp_ptr + 3 * k + 1)) * y_scale_factor;
             float kps_s = *(kp_ptr + 3 * k + 2);
+
+            if( tb_lr_borders_forSquare ) {
+               kps_y = kps_y - tb_lr_borders_forSquare.value().first;
+               kps_x = kps_x - tb_lr_borders_forSquare.value().second;
+            }
 
             feat.location = { kps_x, kps_y };
             feat.confidence = kps_s;
@@ -121,7 +132,7 @@ std::vector<DetectedFeature> YOLO_v8Pose::post_process( std::vector<cv::Mat>& ne
 
 }
 
-void YOLO_v8Pose::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputImage, std::vector<DetectedFeature> detections, std::optional<std::vector<std::string>> classNames )
+void YOLO_v8Pose::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputImage, const std::vector<DetectedFeature>& detections, std::optional<std::vector<std::string>> classNames )
 {
    static const cv::Scalar red( { 0, 0, 255 } );
    static const cv::Scalar green( { 0, 255, 0 } );

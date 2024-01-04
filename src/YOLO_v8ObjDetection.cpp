@@ -25,7 +25,7 @@ std::vector<cv::Mat> YOLO_v8ObjDetection::pre_process( const cv::Mat& inputImage
    return outputs;
 }
 
-std::vector<DetectedFeature> YOLO_v8ObjDetection::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor )
+std::vector<DetectedFeature> YOLO_v8ObjDetection::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor, std::optional<std::pair<int, int>> tb_lr_borders_forSquare )
 {
    const int anchors = netOutputs[0].size[2];//8400 for obj detection
    const int channels = netOutputs[0].size[1];//30 for obj detection
@@ -57,6 +57,11 @@ std::vector<DetectedFeature> YOLO_v8ObjDetection::post_process( std::vector<cv::
          float width = *(row + 2) * x_scale_factor;
          float height = *(row + 3) * y_scale_factor;
 
+         if( tb_lr_borders_forSquare ) {
+            center_y = center_y - tb_lr_borders_forSquare.value().first;
+            center_x = center_x - tb_lr_borders_forSquare.value().second;
+         }
+
          bboxList.push_back( OpenCVHelperFunctions::makeRectFromCXCYWidthHeight( center_x, center_y, width, height ) );
          locations.push_back( { center_x, center_y } );
          scoreList.push_back( max_score );
@@ -83,12 +88,13 @@ std::vector<DetectedFeature> YOLO_v8ObjDetection::post_process( std::vector<cv::
 
 }
 
-void YOLO_v8ObjDetection::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputImage, std::vector<DetectedFeature> detections, std::optional<std::vector<std::string>> classNames )
+void YOLO_v8ObjDetection::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputImage, const std::vector<DetectedFeature>& detections, std::optional<std::vector<std::string>> classNames )
 {
    outputImage = inputImage.clone();
    assert( detections.size() == this->boundingBoxes.size() );
    for( int i = 0; i < detections.size(); i++ ) {
       cv::rectangle( outputImage, boundingBoxes.at( i ), { 255,0,0 } );
+      cv::drawMarker( outputImage, detections.at( i ).location, { 255,0,0 }, cv::MARKER_CROSS, 5 );
 
       std::string label;
       if( classNames ) {

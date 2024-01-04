@@ -25,7 +25,7 @@ std::vector<cv::Mat> YOLO_v5ObjDetection::pre_process( const cv::Mat& inputImage
    return outputs;
 }
 
-std::vector<DetectedFeature> YOLO_v5ObjDetection::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor )
+std::vector<DetectedFeature> YOLO_v5ObjDetection::post_process( std::vector<cv::Mat>& netOutputs, float x_scale_factor, float y_scale_factor, std::optional<std::pair<int, int>> tb_lr_borders_forSquare )
 {
    const int anchors = netOutputs[0].size[1];
    const int channels = netOutputs[0].size[2];
@@ -50,6 +50,12 @@ std::vector<DetectedFeature> YOLO_v5ObjDetection::post_process( std::vector<cv::
          float center_y = *(row + 1) * y_scale_factor;
          float width = *(row + 2) * x_scale_factor;
          float height = *(row + 3) * y_scale_factor;
+
+         if( tb_lr_borders_forSquare ) {
+            center_y = center_y - tb_lr_borders_forSquare.value().first;
+            center_x = center_x - tb_lr_borders_forSquare.value().second;
+         }
+
 
          cv::Mat class_scores( 1, channels-5, CV_32FC1, row+5 );//make a new Mat of just the individual class scores
          double max_class_score = -1;
@@ -84,12 +90,13 @@ std::vector<DetectedFeature> YOLO_v5ObjDetection::post_process( std::vector<cv::
 
 }
 
-void YOLO_v5ObjDetection::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputImage, std::vector<DetectedFeature> detections, std::optional<std::vector<std::string>> classNames )
+void YOLO_v5ObjDetection::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputImage, const std::vector<DetectedFeature>& detections, std::optional<std::vector<std::string>> classNames )
 {
    outputImage = inputImage.clone();
    assert( detections.size() == this->boundingBoxes.size() );
    for( int i = 0; i < detections.size(); i++ ) {
       cv::rectangle( outputImage, boundingBoxes.at( i ), { 255,0,0 } );
+      cv::drawMarker( outputImage, detections.at( i ).location, { 255,0,0 }, cv::MARKER_CROSS, 5 );
 
       std::string label;
       if( classNames ) {
