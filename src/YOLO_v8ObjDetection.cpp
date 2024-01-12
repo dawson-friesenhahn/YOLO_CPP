@@ -74,12 +74,21 @@ std::vector<DetectedFeature> YOLO_v8ObjDetection::post_process( std::vector<cv::
    cv::dnn::NMSBoxes( bboxList, scoreList, SCORE_THRESHOLD, NMS_THRESHOLD, indices );
 
    std::vector<DetectedFeature> detections;
-   this->boundingBoxes.clear(); 
+   this->boundingBoxes.clear();
    for( const auto& index : indices ) {
       DetectedFeature feat;
-      feat.location = locations.at( index );
+
       feat.classIndex = classList.at( index );
       feat.confidence = scoreList.at( index );
+
+      auto it = std::find_if( detections.begin(), detections.end(), [classIndex = feat.classIndex]( const DetectedFeature& feat ) {return feat.classIndex == classIndex; } );
+
+      if( it != detections.end() && (*it).confidence > feat.confidence ) { //we've already found this feature before, and the other detection has a higher confidence.
+         continue;
+      }
+
+      feat.location = locations.at( index );
+
       boundingBoxes.push_back( bboxList.at( index ) );
       detections.push_back( feat );
    }

@@ -136,13 +136,14 @@ void YOLO_v8Pose::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputIm
 {
    static const cv::Scalar red( { 0, 0, 255 } );
    static const cv::Scalar green( { 0, 255, 0 } );
+   static const cv::Scalar blue( { 255,0,0 } );
 
    outputImage = inputImage.clone();
    
    assert( boundingBoxes.size() == allKeypoints.size() / numKeypoints );
 
    for( int i = 0; i < boundingBoxes.size(); i++ ) {
-      cv::rectangle( outputImage, boundingBoxes.at( i ), { 255,0,0 } ); //TODO maybe make this so that different instances get different colors
+      cv::rectangle( outputImage, boundingBoxes.at( i ), blue); //TODO maybe make this so that different instances get different colors
    }
 
    for( const auto& keypt: allKeypoints) {
@@ -156,9 +157,10 @@ void YOLO_v8Pose::drawLabeledImage( const cv::Mat& inputImage, cv::Mat& outputIm
 
       cv::Scalar color;
       if( keypt.confidence > this->SCORE_THRESHOLD ) {
-         color = green;
+         color = blue;
       }
       else {
+         continue; //just skip this keypoint, I don't wanna draw the red markers anymore. Too much noise
          color = red;
       }
 

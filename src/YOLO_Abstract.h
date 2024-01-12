@@ -21,6 +21,7 @@ public:
    float NMS_THRESHOLD = 0.5;
 
    enum YOLO_TYPES { V5_OBJDETECTION, V8_OBJDETECTION, V8_POSE, YOLO_NULL };
+
 protected:
    std::unique_ptr<cv::dnn::Net> net;
    virtual std::vector<cv::Mat> pre_process( const cv::Mat& inputImage ) = 0;
